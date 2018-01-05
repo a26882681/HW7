@@ -39,10 +39,77 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final Button search = (Button)findViewById(R.id.search);
+        final Button change = (Button)findViewById(R.id.change);
+        final EditText local = (EditText) findViewById(R.id.local) ;
+        SupportMapFragment mapFragment=(SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
 
+        mapFragment.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(final GoogleMap googleMap) {
+                if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+                    return;
+                }
+                googleMap.setMyLocationEnabled(true);
+
+                search.setOnClickListener(new View.OnClickListener(){
+                    @Override
+                    public void onClick(View view){
+                        search(googleMap,local.getText().toString());
+                    }
+                });
+                change.setOnClickListener(new View.OnClickListener(){
+                    boolean a=true;
+                    @Override
+                    public void onClick(View view){
+
+                        googleMap.clear();
+                        if(a){
+                            display_filter(googleMap);
+                        }
+                        else display(googleMap);
+                        a=!a;
+
+
+                    }
+                });
+                display(googleMap);
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(25.033739,121.527886), 11));
+
+
+
+            }
+        });
 
     }
+    private void search(GoogleMap googleMap,String local){
+
+        Geocoder geocoder = new Geocoder(getBaseContext());
+        List<Address> addressList = null;
+        int maxResults = 1;
+        try {
+            addressList = geocoder
+                    .getFromLocationName(local, maxResults);
+        } catch (IOException e) {
+            Log.e("GeocoderActivity", e.toString());
+        }
+
+        if(addressList == null || addressList.isEmpty()){
+            Toast.makeText(getBaseContext(), "沒有找到這個地點" ,Toast.LENGTH_SHORT).show();
+        }
+        else{
+            Address address = addressList.get(0);
+            LatLng position = new LatLng(address.getLatitude(),address.getLongitude());
+            String snippet = address.getAddressLine(0);
+            googleMap.addMarker(new MarkerOptions().position(position).title(local).snippet(snippet));
+
+            CameraPosition cameraPosition = new CameraPosition.Builder().target(position).zoom(15).build();
+            googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
+    }
+
     private void display(final GoogleMap googleMap){
         String urlParkingArea = "http://data.taipei/opendata/datalist/apiAccess?scope=resourceAquire&rid=a880adf3-d574-430a-8e29-3192a41897a5";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
